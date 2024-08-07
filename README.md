@@ -366,10 +366,8 @@ modifiedmykOmegaSST<BasicTurbulenceModel>::modifiedmykOmegaSST
 
 After adding the IOobjects we now work on the turbulence model. First, we will add a modified divDevReff function. divDevReff is a term that represents the divergence of the deviatoric part of the effective stress tensor. We modify this term by adding a nonlinear part to the original term in kOmegaSSTBASE define below: 
 
-\[ 
-fvc::div\left( \text{dev}\left(2 \cdot k \cdot \mathbf{b_{ij\Delta}}\right) \cdot \text{useRST} \cdot \xi \right)
-\]
 
+$$ fvc::div\left( \text{dev}\left(2 \cdot k \cdot \mathbf{b_{ij\Delta}}\right) \cdot \text{useRST} \cdot \xi \right) $$
 
 Add the following lines to the bottom of modifiedmykOmegaSST.C:
 ```cpp
