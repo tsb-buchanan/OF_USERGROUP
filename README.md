@@ -39,7 +39,7 @@ wmake
 # Implementing Turbulence model from scratch
 
 In this document we will implement a modified version of the kOmegaSST model, named modifiedmykOmegaSST.Before that however,  we will first practice a bit by making our own versions of kEpsilon and kOmegaSST. In fact, there is a problem when only trying to make a new version of kOmegaSST. That is likely due to the special design with the kOmegaSSTBase class. However, the problem disappears  if the kEpsilon model is first implemented. We first start by copying and renaming the kEpsilon and kOmegaSST folders, files and classes:
-
+'''
 foam 
 cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kEpsilon $WM_PROJECT_USER_DIR 
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
@@ -56,7 +56,7 @@ mv kOmegaSST mykOmegaSST
 cd mykOmegaSST 
 mv kOmegaSST.C mykOmegaSST.C 
 mv kOmegaSST.H mykOmegaSST.H
-
+'''
 At this point we want to change the name of the class in those files using the sed command. The problem is that there is a string 'kOmegaSSTBase' occurring in the files, so we need to use a sed command that will not modify those strings. Here is a sed command that omits lines that contain the word kOmegaSSTBase (and gives an example of how to also omit lines with the words 'mykOmegaSST' and 'dummy'):
 
 
