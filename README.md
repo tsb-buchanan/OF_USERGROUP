@@ -12,7 +12,7 @@ git clone https://github.com/tsb-buchanan/OF_USERGROUP.git
 
 # Docker
 It is assuned that openfoam7 is already installed otherwise you can use the docker image and use the following lines:
-
+```bash
 Steps to run OpenFOAM-7 on docker 
 Make a directory for the openfoam
 mkdir openfoam
@@ -26,20 +26,20 @@ sh docker_starter.sh
 // Now you are in the container!
 // To exit the container (run in the container)
 exit
-
+```
 
 # Premade turbulence model (quick install)
 In this git is all the files premade. Therefore only commands to be preformed to compile custom turbulence model is:
-
+```bash
 cd OF_USERGROUP/TURBFOAM-7/src/TurbulenceModels/incompressible/
 wclean
 wmakeLnInclude -u ../turbulenceModels
 wmake
-
+```
 # Implementing Turbulence model from scratch
 
 In this document we will implement a modified version of the kOmegaSST model, named modifiedmykOmegaSST.Before that however,  we will first practice a bit by making our own versions of kEpsilon and kOmegaSST. In fact, there is a problem when only trying to make a new version of kOmegaSST. That is likely due to the special design with the kOmegaSSTBase class. However, the problem disappears  if the kEpsilon model is first implemented. We first start by copying and renaming the kEpsilon and kOmegaSST folders, files and classes:
-'''
+```bash
 foam 
 cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kEpsilon $WM_PROJECT_USER_DIR 
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
@@ -56,16 +56,16 @@ mv kOmegaSST mykOmegaSST
 cd mykOmegaSST 
 mv kOmegaSST.C mykOmegaSST.C 
 mv kOmegaSST.H mykOmegaSST.H
-'''
+```
 At this point we want to change the name of the class in those files using the sed command. The problem is that there is a string 'kOmegaSSTBase' occurring in the files, so we need to use a sed command that will not modify those strings. Here is a sed command that omits lines that contain the word kOmegaSSTBase (and gives an example of how to also omit lines with the words 'mykOmegaSST' and 'dummy'):
 
-
+```bash
 sed -Ei '/(kOmegaSSTBase|mykOmegaSST|dummy)/!s/kOmegaSST/mykOmegaSST/g' mykOmegaSST.*
-
+```
 Two important notes about the above command: 1: I experienced that it is important to have the flags in the order Ei and not iE, since otherwise the omission will not work. 2: According to comments in forums the command will not omit consecutive lines with those words. However, in this particular case it works.
 
 Additionally, you want to keep just kOmegaSST for following line in mykOmegaSST.C that is commented below:
-
+```cpp
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
@@ -86,17 +86,17 @@ mykOmegaSST<BasicTurbulenceModel>::mykOmegaSST
         eddyViscosity<RASModel<BasicTurbulenceModel>>,
         BasicTurbulenceModel
     >
-
+```
 Now we need to copy a file with macros that tell the compiler which instances of turbulence models to compile, as one of the available template options:
-
+```bash
 foam 
 cp --parents src/TurbulenceModels/incompressible/turbulentTransportModels/turbulentTransportModels.C $WM_PROJECT_USER_DIR 
 cp -r --parents src/TurbulenceModels/incompressible/Make $WM_PROJECT_USER_DIR 
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible/turbulentTransportModels 
 mv turbulentTransportModels.C myTurbulentTransportModels.C
-
+```
 Open myTurbulentTransportModels.C and make sure that the active lines are:
-
+```cpp
 #include "turbulentTransportModels.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -126,19 +126,19 @@ makeRASModel(mykOmegaSST);
 
 
 // ************************************************************************* //
-
+```
 
 Now we need to make sure that we can compile by modifying Make/files and Make/options. First go there:
-
+```bash
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible
-
+```
 Then make sure that Make/files contains only:
-
+```bash
 turbulentTransportModels/myTurbulentTransportModels.C 
 LIB = $(FOAM_USER_LIBBIN)/libmyIncompressibleTurbulenceModels
-
+```
 Then add two entries under EXE_INC and one entry under LIB_LIBS in Make/options to connect to the original library:
-
+```cpp
 EXE_INC = \
     -I../turbulenceModels/lnInclude \
     -I$(LIB_SRC)/transportModels \
@@ -153,19 +153,20 @@ LIB_LIBS = \
     -lfiniteVolume \
     -lmeshTools \
     -lincompressibleTurbulenceModels
-
+```
 In order to compile we need to first create an lnInclude directory for the available turbulence models using the wmakeLnInclude command (this must be repeated if more turbulence models are added later), and the we can compile with wmake as usual:
-
+```bash
 wmakeLnInclude -u ../turbulenceModels 
 wmake
-
+```
 # Test mykOmegaSST
 
 In OF_USERGROUP/platforms/Case_Studies/Periodic_Hill/00Baseline/constant/turbulenceProperties change kOmegaSST to mykOmegaSST.
 
 Then at the begining of system/controlDict add:
+```cpp
 libs ("libmyIncompressibleTurbulenceModels.so");
-
+```
 Run (You can just run ./run.sh in 00Baseline folder) with the two new turbulence models (Or just check mykOmegaSST) and check the log-file that they are selected. Try also with a dummy entry and see that both the original and new turbulence models are available for simpleFoam in this particular case (which has the libs-entry in controlDict).
 
 
@@ -174,20 +175,21 @@ Run (You can just run ./run.sh in 00Baseline folder) with the two new turbulence
 We will in the rest of the document go through the basic steps of implementing a new kOmegaSST model, named modifiedmykOmegaSST. The model is data-driven turbulence model that corrects the anisotropy reynolds stress (bijDelta) and turbulent production (kDeficit) in the kOmegaSST turbulence model. The Explict Algebraic Stress models are obtained using SpaRTA described in the following papers:
 
 SpaRTA: https://doi.org/10.1007/s10494-019-00089-x
+
 Models used in Tutorial: http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d-4e2e0b992797
 
 Now to begin implementing the modifiedmykOmegaSST, we copy mykOmegaSST, rename directory, files and class names, and finally update the lnInclude directory:
-
+```bash
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
 cp -r mykOmegaSST modifiedmykOmegaSST
 mv modifiedmykOmegaSST/mykOmegaSST.C modifiedmykOmegaSST/modifiedmykOmegaSST.C 
 mv modifiedmykOmegaSST/mykOmegaSST.H modifiedmykOmegaSST/modifiedmykOmegaSST.H 
 sed -i s/mykOmegaSST/modifiedmykOmegaSST/g modifiedmykOmegaSST/modifiedmykOmegaSST.* 
-
+```
 
 
 Additionally, you want to keep just kOmegaSST for following line in modifiedmykOmegaSST.C that is commented below:
-
+```cpp
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
@@ -208,20 +210,19 @@ mykOmegaSST<BasicTurbulenceModel>::modifiedmykOmegaSST
         eddyViscosity<RASModel<BasicTurbulenceModel>>,
         BasicTurbulenceModel
     >
+```
 
-
-Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile we need to make the compiler aware that we have done modifications. The reason for this is that we did not modify any file that is listed in Make/files. We use the touch command to change the time-stamp of that file, so that the compiler will compile.
-
+Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile, we need to make the compiler aware that we have done modifications. The reason for this is that we did not modify any file that is listed in Make/files. We use the touch command to change the time-stamp of that file, so that the compiler will compile.
+```bash
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
 wmakeLnInclude -u ../turbulenceModels
-
 touch turbulentTransportModels/myTurbulentTransportModels.C 
 wmake
+```
+Notice that the modifiedmykOmegaSST model is not shown in the compilation output, but it is. The compilation will take more time than expected when we only added one additional turbulence model, and that is because all the templated alternatives mentioned in the above file must be recompiled. Right now, it means that kEpsilon, kOmegaSST, and modifiedmykOmegaSST are all compiled.
 
-Notice that it is not shown in the output of the compilation that the modifiedmykOmegaSST model is compiled, but it is. The compilation will take more time than expected when we only added one additonal turbulence model, and that is because all the templated alternatives mentioned in the above file must be recompiled. Right now it means that kEpsilon, kOmegaSST and modifiedmykOmegaSST are all compiled.
-
-Now we need to modifiy modifiedmykOmegaSST with correction models. To do this we need to add the flowing code to modifiedmykOmegaSST.C. In this section we adding new IOobjects for model corrections and propagation parameters. 
-
+Now we need to modifiy modifiedmykOmegaSST with correction models. To do this we need to add the flowing code to modifiedmykOmegaSST.C. In this section, we add new IO objects for model corrections and propagation parameters. 
+```cpp
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
@@ -361,7 +362,7 @@ modifiedmykOmegaSST<BasicTurbulenceModel>::modifiedmykOmegaSST
         this->printCoeffs(type);
     }
 }
-
+```
 
 After adding the IOobjects we now work on the turbulence model. First we will add a modified divDevReff fuction. divDevReff is a term that represents the divergence of the deviatoric part of the effective stress tensor. We modify this term by adding a nonlinear part to original term in kOmegaSSTBASE define below: 
 
@@ -371,7 +372,7 @@ fvc::div\left( \text{dev}\left(2 \cdot k \cdot \mathbf{b_{ij\Delta}}\right) \cdo
 
 
 Add the following lines to the bottom of modifiedmykOmegaSST.C:
-
+```cpp
 template<class BasicTurbulenceModel>
 tmp<fvVectorMatrix> modifiedmykOmegaSST<BasicTurbulenceModel>::divDevReff
 (
@@ -386,11 +387,11 @@ tmp<fvVectorMatrix> modifiedmykOmegaSST<BasicTurbulenceModel>::divDevReff
       + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)  // non-linear part
     );
 }
-
+```
 
 With the modifed divDevReff() function added, we now will add the modified k and omega equations allong with the Explict Alegbraic Stress Models defined in http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d-4e2e0b992797. The following code can be added to modifiedmykOmegaSST.C:
 
-
+```cpp
 template<class BasicTurbulenceModel>
 void modifiedmykOmegaSST<BasicTurbulenceModel>::correct()
 {
@@ -544,11 +545,11 @@ void modifiedmykOmegaSST<BasicTurbulenceModel>::correct()
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+```
 
 With all the code snippits added to modifiedmykOmegaSST.C we also need to make a few small additions to modifiedmykOmegaSST.H. The first additions is initializing the added IOobjects described in the .C file: 
 
-
+```cpp
 protected: //Need to add before public:
 
         // Control of corrections
@@ -568,10 +569,11 @@ public:
     typedef typename BasicTurbulenceModel::alphaField alphaField;
     typedef typename BasicTurbulenceModel::rhoField rhoField;
     typedef typename BasicTurbulenceModel::transportModel transportModel;
-
+```
 
 Once these IOojects are added, in modifiedmykOmegaSST.H, add at the end of the class declaration (before the destructor and before the curly bracket that is followed by a semicolon):
 
+```cpp
     //- Solve the turbulence equations and correct the turbulence viscosity
     virtual void correct();
 
@@ -582,17 +584,17 @@ In addtion add divDevReff call after the destructor shown below:
     {}
 
     tmp<Foam::fvVectorMatrix> divDevReff(volVectorField& U) const;
-
+```
 
 We can now save both the .C and .H file and compile the newly completed turbulence model by using the following lines:
-
+```bash
 cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
 wclean
 wmakeLnInclude -u ../turbulenceModels
 wmake
-
+```
 After this we can test the new model by going to 01Modified in Case_Studies folder and running the run.sh script. When going into the constant/turbulenceProperties you will see the follwong additons to the file below. This is added to determine when the correction models are added and how much of the correction is being added. (Note case may already be ran so deleted *00 folders)
-
+```cpp
 simulationType RAS;
 
 RAS
@@ -608,6 +610,6 @@ RAS
     rampEndTime     3000; // iteration to reach full corrections defined by useRST and usekDeficit
 
 }
-
+```
 
 After running the case you can visualize both the baseline, modified case and compare to LES data saved as /home/tbuchanan/OF_USERGROUP/Case_Studies/Periodic_Hill/00Baseline/Reference_solution.SST.2000 using the paraFoam function. Make sure to cp -r Reference_solution.SST.2000 2000 so paraFoam can read it. 
