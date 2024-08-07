@@ -25,7 +25,7 @@ startTime       0;
 
 stopAt          endTime;//writeNow
 
-endTime         10000;
+endTime         10001;
 
 deltaT          1;
 

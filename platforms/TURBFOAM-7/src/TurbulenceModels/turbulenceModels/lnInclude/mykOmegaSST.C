@@ -1,1 +1,0 @@
-../RAS/mykOmegaSST/mykOmegaSST.C
