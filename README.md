@@ -128,9 +128,9 @@ makeRASModel(mykOmegaSST);
 // ************************************************************************* //
 ```
 
-Now we need to make sure that we can compile by modifying Make/files and Make/options. First go there:
+Now we need to make sure that we can compile by modifying Make/files and Make/options. First, go there:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible
+cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible
 ```
 Then make sure that Make/files contains only:
 ```bash
@@ -154,7 +154,7 @@ LIB_LIBS = \
     -lmeshTools \
     -lincompressibleTurbulenceModels
 ```
-In order to compile we need to first create an lnInclude directory for the available turbulence models using the wmakeLnInclude command (this must be repeated if more turbulence models are added later), and the we can compile with wmake as usual:
+In order to compile we need to first create an lnInclude directory for the available turbulence models using the wmakeLnInclude command (this must be repeated if more turbulence models are added later), and the we can compile with wmake as usual (Make sure you are in the correct folder /TURBFOAM-7/src/TurbulenceModels/incompressible):
 ```bash
 wmakeLnInclude -u ../turbulenceModels 
 wmake
@@ -180,7 +180,7 @@ Models used in Tutorial: http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d
 
 Now to begin implementing the modifiedmykOmegaSST, we copy mykOmegaSST, rename the directory, files, and class names, and finally update the lnInclude directory:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
+cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/turbulenceModels/RAS 
 cp -r mykOmegaSST modifiedmykOmegaSST
 mv modifiedmykOmegaSST/mykOmegaSST.C modifiedmykOmegaSST/modifiedmykOmegaSST.C 
 mv modifiedmykOmegaSST/mykOmegaSST.H modifiedmykOmegaSST/modifiedmykOmegaSST.H 
@@ -214,7 +214,7 @@ mykOmegaSST<BasicTurbulenceModel>::modifiedmykOmegaSST
 
 Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile, we need to make the compiler aware that we have made modifications. The reason for this is that we did not modify any file listed in Make/files. We use the touch command to change the time stamp of that file so that the compiler will compile.
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
+cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible 
 wmakeLnInclude -u ../turbulenceModels
 touch turbulentTransportModels/myTurbulentTransportModels.C 
 wmake
@@ -586,7 +586,7 @@ In addtion add divDevReff call after the destructor shown below:
 
 We can now save both the .C and .H file and compile the newly completed turbulence model by using the following lines:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
+cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible 
 wclean
 wmakeLnInclude -u ../turbulenceModels
 wmake
