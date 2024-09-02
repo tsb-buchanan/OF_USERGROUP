@@ -442,6 +442,58 @@ tmp<fvVectorMatrix> modifiedmykOmegaSST<BasicTurbulenceModel>::divDevReff
       + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)  // non-linear part
     );
 }
+
+
+ 
+//- Return the modified effective stress tensor  
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::volSymmTensorField>
+modifiedmykOmegaSST<BasicTurbulenceModel>::devRhoReff() const
+{
+    Info << "In: modifiedmykOmegaSST::devRhoReff()" << endl;
+    return volSymmTensorField::New
+    (
+        IOobject::groupName("devRhoReff", this->alphaRhoPhi_.group()),
+        (-(this->alpha_*this->rho_*this->nuEff()))
+       *dev(twoSymm(fvc::grad(this->U_)))
+       + dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_
+    );
+}
+
+//- Return the modified source term for the momentum equation
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::fvVectorMatrix>
+modifiedmykOmegaSST<BasicTurbulenceModel>::divDevRhoReff
+(
+    volVectorField& U
+) const
+{
+    Info << "In: modifiedmykOmegaSST::divDevRhoReff(U)" << endl;
+    return
+    (
+      - fvc::div((this->alpha_*this->rho_*this->nuEff())*dev2(T(fvc::grad(U))))
+      - fvm::laplacian(this->alpha_*this->rho_*this->nuEff(), U)
+      + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)
+    );
+}
+
+//- Return the modified source term for the momentum equation
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::fvVectorMatrix>
+modifiedmykOmegaSST<BasicTurbulenceModel>::divDevRhoReff
+(
+    const volScalarField& rho,
+    volVectorField& U
+) const
+{
+    Info << "In: modifiedmykOmegaSST::divDevRhoReff(rho, U)" << endl;
+    return
+    (
+      - fvc::div((this->alpha_*rho*this->nuEff())*dev2(T(fvc::grad(U))))
+      - fvm::laplacian(this->alpha_*rho*this->nuEff(), U)
+      + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)
+    );
+}  
 ```
 
 With the modified divDevReff() function added, we now will add the modified k and omega equations along with the Explicit Algebraic Stress Models defined in http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d-4e2e0b992797. The following code can be added to modifiedmykOmegaSST.C:
@@ -639,6 +691,20 @@ Once these IOojects are added, in modifiedmykOmegaSST.H, add at the end of the c
     {}
 
     tmp<Foam::fvVectorMatrix> divDevReff(volVectorField& U) const;
+
+    //- Return the modified effective stress tensor
+    virtual tmp<volSymmTensorField> devRhoReff() const;
+
+    //- Return the modified source term for the momentum equation
+    virtual tmp<fvVectorMatrix> divDevRhoReff(volVectorField& U) const;
+
+    //- Return the modified source term for the momentum equation
+    virtual tmp<fvVectorMatrix> divDevRhoReff
+    (
+        const volScalarField& rho,
+        volVectorField& U
+    ) const;
+
 ```
 
 We can now save both the .C and .H file and compile the newly completed turbulence model by using the following lines:

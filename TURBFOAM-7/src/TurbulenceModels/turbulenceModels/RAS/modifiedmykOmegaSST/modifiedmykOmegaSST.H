@@ -114,6 +114,20 @@ public:
     {}
 
     tmp<Foam::fvVectorMatrix> divDevReff(volVectorField& U) const;
+
+    //- Return the modified effective stress tensor
+    virtual tmp<volSymmTensorField> devRhoReff() const;
+
+    //- Return the modified source term for the momentum equation
+    virtual tmp<fvVectorMatrix> divDevRhoReff(volVectorField& U) const;
+
+    //- Return the modified source term for the momentum equation
+    virtual tmp<fvVectorMatrix> divDevRhoReff
+    (
+        const volScalarField& rho,
+        volVectorField& U
+    ) const;
+
 };
 
 

@@ -187,7 +187,60 @@ tmp<fvVectorMatrix> modifiedmykOmegaSST<BasicTurbulenceModel>::divDevReff
       + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)  // non-linear part
     );
 }
+
+
+ 
+//- Return the modified effective stress tensor  
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::volSymmTensorField>
+modifiedmykOmegaSST<BasicTurbulenceModel>::devRhoReff() const
+{
+    Info << "In: modifiedmykOmegaSST::devRhoReff()" << endl;
+    return volSymmTensorField::New
+    (
+        IOobject::groupName("devRhoReff", this->alphaRhoPhi_.group()),
+        (-(this->alpha_*this->rho_*this->nuEff()))
+       *dev(twoSymm(fvc::grad(this->U_)))
+       + dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_
+    );
+}
+
+//- Return the modified source term for the momentum equation
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::fvVectorMatrix>
+modifiedmykOmegaSST<BasicTurbulenceModel>::divDevRhoReff
+(
+    volVectorField& U
+) const
+{
+    Info << "In: modifiedmykOmegaSST::divDevRhoReff(U)" << endl;
+    return
+    (
+      - fvc::div((this->alpha_*this->rho_*this->nuEff())*dev2(T(fvc::grad(U))))
+      - fvm::laplacian(this->alpha_*this->rho_*this->nuEff(), U)
+      + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)
+    );
+}
+
+//- Return the modified source term for the momentum equation
+template<class BasicTurbulenceModel>
+Foam::tmp<Foam::fvVectorMatrix>
+modifiedmykOmegaSST<BasicTurbulenceModel>::divDevRhoReff
+(
+    const volScalarField& rho,
+    volVectorField& U
+) const
+{
+    Info << "In: modifiedmykOmegaSST::divDevRhoReff(rho, U)" << endl;
+    return
+    (
+      - fvc::div((this->alpha_*rho*this->nuEff())*dev2(T(fvc::grad(U))))
+      - fvm::laplacian(this->alpha_*rho*this->nuEff(), U)
+      + fvc::div(dev(2.*this->k_*this->bijDelta_) * useRST_ * xi_)
+    );
+}  
   
+
 
 template<class BasicTurbulenceModel>
 void modifiedmykOmegaSST<BasicTurbulenceModel>::correct()
