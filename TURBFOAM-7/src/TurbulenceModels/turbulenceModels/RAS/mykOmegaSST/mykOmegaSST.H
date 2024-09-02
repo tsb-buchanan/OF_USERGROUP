@@ -57,7 +57,7 @@ namespace RASModels
 template<class BasicTurbulenceModel>
 class mykOmegaSST
 :
-    public Foam::kOmegaSST
+    public Foam::kOmegaSST //Keep as kOmegaSST
     <
         eddyViscosity<RASModel<BasicTurbulenceModel>>,
         BasicTurbulenceModel

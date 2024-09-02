@@ -64,7 +64,11 @@ sed -Ei '/(kOmegaSSTBase|mykOmegaSST|dummy)/!s/kOmegaSST/mykOmegaSST/g' mykOmega
 ```
 Two important notes about the above command: 1: I experienced that it is important to have the flags in the order Ei and not iE, since otherwise the omission will not work. 2: According to comments in forums the command will not omit consecutive lines with those words. However, in this particular case it works.
 
-Additionally, you want to keep just kOmegaSST for following line in mykOmegaSST.C that is commented below:
+It is very important when renaming turbulence models to keep the naming consistent otherwise you will call classes from other turbulence models and your modifications will not be implemented. 
+
+As for example this is shown below where the code defines the constructor of the mykOmegaSST class template, which is derived from the kOmegaSST class in OpenFOAM. The constructor takes various parameters (alpha, rho, U, alphaRhoPhi,..etc) related to the turbulence model setup, and the base class is initialized with the specified eddy viscosity model and basic turbulence model types.
+
+Therefore, We want to keep just kOmegaSST for following line in mykOmegaSST.C that is commented below:
 ```cpp
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -87,6 +91,37 @@ mykOmegaSST<BasicTurbulenceModel>::mykOmegaSST
         BasicTurbulenceModel
     >
 ```
+You also need to do this for the mykOmegaSST.H file for the following code below. 
+
+
+```cpp
+/*---------------------------------------------------------------------------*\
+                          Class mykOmegaSST Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class BasicTurbulenceModel>
+class mykOmegaSST
+:
+    public Foam::kOmegaSST // Keep kOmegaSST
+    <
+        eddyViscosity<RASModel<BasicTurbulenceModel>>,
+        BasicTurbulenceModel
+    >
+{
+
+public:
+
+    typedef typename BasicTurbulenceModel::alphaField alphaField;
+    typedef typename BasicTurbulenceModel::rhoField rhoField;
+    typedef typename BasicTurbulenceModel::transportModel transportModel;
+
+
+    //- Runtime type information
+    TypeName("mykOmegaSST");
+```
+
+
+
 Now we need to copy a file with macros that tell the compiler which instances of turbulence models to compile as one of the available template options:
 ```bash
 foam 
@@ -130,7 +165,7 @@ makeRASModel(mykOmegaSST);
 
 Now we need to make sure that we can compile by modifying Make/files and Make/options. First, go there:
 ```bash
-cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible
+cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible
 ```
 Then make sure that Make/files contains only:
 ```bash
@@ -180,7 +215,7 @@ Models used in Tutorial: http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d
 
 Now to begin implementing the modifiedmykOmegaSST, we copy mykOmegaSST, rename the directory, files, and class names, and finally update the lnInclude directory:
 ```bash
-cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/turbulenceModels/RAS 
+cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
 cp -r mykOmegaSST modifiedmykOmegaSST
 mv modifiedmykOmegaSST/mykOmegaSST.C modifiedmykOmegaSST/modifiedmykOmegaSST.C 
 mv modifiedmykOmegaSST/mykOmegaSST.H modifiedmykOmegaSST/modifiedmykOmegaSST.H 
@@ -212,9 +247,31 @@ mykOmegaSST<BasicTurbulenceModel>::modifiedmykOmegaSST
     >
 ```
 
-Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile, we need to make the compiler aware that we have made modifications. The reason for this is that we did not modify any file listed in Make/files. We use the touch command to change the time stamp of that file so that the compiler will compile.
+Same for the .H File
+```cpp
+
+/*---------------------------------------------------------------------------*\
+                          Class modifiedmykOmegaSST Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class BasicTurbulenceModel>
+class modifiedmykOmegaSST
+:
+    public Foam::kOmegaSST
+    <
+        eddyViscosity<RASModel<BasicTurbulenceModel>>,
+        BasicTurbulenceModel
+    >
+{
+protected:
+
+        // Control of correct introductions
+    
+```
+
+Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile, we need to make the compiler aware that we have made modifications. The reason for this is that we did not modify any file listed in Make/files. We use the touch (wclean is also fine)command to change the time stamp of that file so that the compiler will compile.
 ```bash
-cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible 
+cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
 wmakeLnInclude -u ../turbulenceModels
 touch turbulentTransportModels/myTurbulentTransportModels.C 
 wmake
@@ -575,7 +632,7 @@ Once these IOojects are added, in modifiedmykOmegaSST.H, add at the end of the c
     //- Solve the turbulence equations and correct the turbulence viscosity
     virtual void correct();
 
-In addtion add divDevReff call after the destructor shown below:
+    // In addtion add divDevReff call after the destructor shown below:
     
     //- Destructor
     virtual ~modifiedmykOmegaSST()
@@ -586,12 +643,13 @@ In addtion add divDevReff call after the destructor shown below:
 
 We can now save both the .C and .H file and compile the newly completed turbulence model by using the following lines:
 ```bash
-cd $WM_PROJECT_USER_DIR/TURBFOAM-7/src/TurbulenceModels/incompressible 
+cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
 wclean
 wmakeLnInclude -u ../turbulenceModels
 wmake
 ```
 After this we can test the new model by going to 01Modified in Case_Studies folder and running the run.sh script. When going into the constant/turbulenceProperties you will see the following addition to the file below. This is added to determine when the correction models are added and how much of the correction is being added. (Note case may already be ran so delete other timesteps other than 0 directory using rm -rf *00)
+
 ```cpp
 simulationType RAS;
 

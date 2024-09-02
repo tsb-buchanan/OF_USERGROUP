@@ -63,6 +63,7 @@ mykOmegaSST<BasicTurbulenceModel>::mykOmegaSST
         propertiesName
     )
 {
+    Info << "Hello world from a custom turbulence model." << endl;
     if (type == typeName)
     {
         this->printCoeffs(type);
