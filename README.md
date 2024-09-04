@@ -198,7 +198,7 @@ wmake
 ```
 # Test mykOmegaSST
 
-In OF_USERGROUP/platforms/Case_Studies/Periodic_Hill/00Baseline/constant/turbulenceProperties change kOmegaSST to mykOmegaSST.
+In OF_USERGROUP/Case_Studies/Periodic_Hill/00Baseline/constant/turbulenceProperties change kOmegaSST to mykOmegaSST.
 
 Then at the begining of system/controlDict add:
 ```cpp
