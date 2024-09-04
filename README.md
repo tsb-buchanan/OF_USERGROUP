@@ -40,9 +40,11 @@ wmake
 
 In this document, we will implement a modified version of the kOmegaSST model, named modifiedmykOmegaSST.Before that however,  we will first practice a bit by making our own versions of kEpsilon and kOmegaSST. There is a problem when only trying to make a new version of kOmegaSST. That is likely due to the unique design with the kOmegaSSTBase class. However, the problem disappears  if the kEpsilon model is first implemented. We first start by copying and renaming the kEpsilon and kOmegaSST folders, files and classes:
 ```bash
+export CUSTOM_TURBULENCE_MODEL_DIR=~/CustomTurbModel
+mkdir $CUSTOM_TURBULENCE_MODEL_DIR
 foam 
-cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kEpsilon $WM_PROJECT_USER_DIR 
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
+cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kEpsilon $CUSTOM_TURBULENCE_MODEL_DIR 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/turbulenceModels/RAS 
 mv kEpsilon mykEpsilon 
 cd mykEpsilon 
 mv kEpsilon.C mykEpsilon.C 
@@ -50,8 +52,8 @@ mv kEpsilon.H mykEpsilon.H
 sed -i s/kEpsilon/mykEpsilon/g mykEpsilon.* 
 
 foam 
-cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kOmegaSST $WM_PROJECT_USER_DIR 
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
+cp -r --parents src/TurbulenceModels/turbulenceModels/RAS/kOmegaSST $CUSTOM_TURBULENCE_MODEL_DIR 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/turbulenceModels/RAS 
 mv kOmegaSST mykOmegaSST 
 cd mykOmegaSST 
 mv kOmegaSST.C mykOmegaSST.C 
@@ -125,9 +127,9 @@ public:
 Now we need to copy a file with macros that tell the compiler which instances of turbulence models to compile as one of the available template options:
 ```bash
 foam 
-cp --parents src/TurbulenceModels/incompressible/turbulentTransportModels/turbulentTransportModels.C $WM_PROJECT_USER_DIR 
-cp -r --parents src/TurbulenceModels/incompressible/Make $WM_PROJECT_USER_DIR 
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible/turbulentTransportModels 
+cp --parents src/TurbulenceModels/incompressible/turbulentTransportModels/turbulentTransportModels.C $CUSTOM_TURBULENCE_MODEL_DIR
+cp -r --parents src/TurbulenceModels/incompressible/Make $CUSTOM_TURBULENCE_MODEL_DIR 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/incompressible/turbulentTransportModels 
 mv turbulentTransportModels.C myTurbulentTransportModels.C
 ```
 Open myTurbulentTransportModels.C and make sure that the active lines are:
@@ -165,7 +167,7 @@ makeRASModel(mykOmegaSST);
 
 Now we need to make sure that we can compile by modifying Make/files and Make/options. First, go there:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/incompressible
 ```
 Then make sure that Make/files contains only:
 ```bash
@@ -215,7 +217,7 @@ Models used in Tutorial: http://resolver.tudelft.nl/uuid:324d4b2d-bf58-40a0-b60d
 
 Now to begin implementing the modifiedmykOmegaSST, we copy mykOmegaSST, rename the directory, files, and class names, and finally update the lnInclude directory:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/turbulenceModels/RAS 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/turbulenceModels/RAS 
 cp -r mykOmegaSST modifiedmykOmegaSST
 mv modifiedmykOmegaSST/mykOmegaSST.C modifiedmykOmegaSST/modifiedmykOmegaSST.C 
 mv modifiedmykOmegaSST/mykOmegaSST.H modifiedmykOmegaSST/modifiedmykOmegaSST.H 
@@ -271,7 +273,7 @@ protected:
 
 Now add modifiedmykOmegaSST the same way as mykOmegaSST in myTurbulentTransportModels.C (see previous section). Before we compile, we need to make the compiler aware that we have made modifications. The reason for this is that we did not modify any file listed in Make/files. We use the touch (wclean is also fine)command to change the time stamp of that file so that the compiler will compile.
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/incompressible 
 wmakeLnInclude -u ../turbulenceModels
 touch turbulentTransportModels/myTurbulentTransportModels.C 
 wmake
@@ -709,7 +711,7 @@ Once these IOojects are added, in modifiedmykOmegaSST.H, add at the end of the c
 
 We can now save both the .C and .H file and compile the newly completed turbulence model by using the following lines:
 ```bash
-cd $WM_PROJECT_USER_DIR/src/TurbulenceModels/incompressible 
+cd $CUSTOM_TURBULENCE_MODEL_DIR/src/TurbulenceModels/incompressible 
 wclean
 wmakeLnInclude -u ../turbulenceModels
 wmake
